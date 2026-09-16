@@ -1,0 +1,6 @@
+# Cached crt.sh responses and poll cursors — regenerable, and large
+data/cache/
+data/*.cursor.json
+
+__pycache__/
+*.pyc

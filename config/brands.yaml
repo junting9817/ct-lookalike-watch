@@ -1,0 +1,149 @@
+# The watchlist: brands whose names are worth watching for in newly issued certificates.
+#
+# Each brand has:
+#   terms       substrings queried against the Certificate Transparency index. A term is what an impersonator has to
+#               include for the name to *look* right to a Korean reader — so it is the brand as people type it, not
+#               its legal name.
+#   legitimate  registrable domains the brand actually operates. Certificates under these are suppressed, and the
+#               list is the main thing that needs maintaining: a brand quietly registering a new domain shows up as a
+#               false positive until it is added here.
+#   note        why this brand is on the list, and anything known about how it is abused.
+#
+# Terms shorter than 5 characters are refused unless marked `allow_short`, with a reason. "kt" as a substring matches
+# thousands of unrelated names; a term that matches everything is worse than no term at all.
+#
+# Nothing in this file is ever resolved, fetched or visited. These are names to compare against, not targets.
+
+version: 1
+
+brands:
+  # ------------------------------------------------------------------ banking
+  - name: KB국민은행
+    english: KB Kookmin Bank
+    sector: banking
+    terms: [kbstar, kookminbank, kbfg]
+    allow_short: [kbfg]   # four letters, but not a word in any language and not a common abbreviation
+    legitimate: [kbstar.com, kbfg.com, kbcard.com, kookminbank.com]
+    note: Korea's largest retail bank; kbstar.com is the name customers actually see on login pages.
+
+  - name: 신한은행
+    english: Shinhan Bank
+    sector: banking
+    terms: [shinhan, shinhancard]
+    legitimate: [shinhan.com, shinhanbank.com, shinhancard.com, shinhangroup.com, shinhanglobal.com, shinhansec.com]
+    note: Large overseas footprint (shinhan.com.vn and similar), so legitimate certificates are numerous and varied.
+
+  - name: 우리은행
+    english: Woori Bank
+    sector: banking
+    terms: [wooribank, woorifg, wooricard]
+    legitimate: [wooribank.com, woorifg.com, wooricard.com]
+    note: The word 우리 means 'our', so 'woori' alone would match unrelated names; the terms keep the suffix.
+
+  - name: 하나은행
+    english: Hana Bank
+    sector: banking
+    terms: [hanabank, kebhana, hanacard]
+    legitimate: [hanabank.com, kebhana.com, hanafn.com, hanacard.co.kr]
+    note: 하나 means 'one', so 'hana' alone appears in thousands of unrelated domains; the terms keep the suffix.
+
+  - name: NH농협
+    english: NH Nonghyup
+    sector: banking
+    terms: [nonghyup, nhbank]
+    legitimate: [nonghyup.com, nhbank.com, nonghyup.co.kr]
+    note: Agricultural cooperative bank with very wide rural retail reach.
+
+  - name: 카카오뱅크
+    english: KakaoBank
+    sector: banking
+    terms: [kakaobank]
+    legitimate: [kakaobank.com]
+    note: Mobile-first bank; its customers never see a branch, so a convincing web page is the whole attack.
+
+  - name: 케이뱅크
+    english: K bank
+    sector: banking
+    terms: [kbanknow]
+    legitimate: [kbanknow.com]
+    note: Internet-only bank. The brand name "K bank" is too generic to query; the service domain is not.
+
+  # ------------------------------------------------------------------ delivery
+  - name: CJ대한통운
+    english: CJ Logistics
+    sector: delivery
+    terms: [cjlogistics, doortodoor]
+    legitimate: [cjlogistics.com, cj.net, doortodoor.co.kr]
+    note: The delivery brand most used in Korean smishing — "your parcel could not be delivered" texts.
+
+  - name: 우체국택배
+    english: Korea Post
+    sector: delivery
+    terms: [epost, koreapost]
+    legitimate: [epost.go.kr, koreapost.go.kr, epost.kr]
+    note: A government service, so a .go.kr lookalike on a commercial TLD is itself a strong signal.
+
+  - name: 롯데택배
+    english: Lotte Global Logistics
+    sector: delivery
+    terms: [lotteglogis]
+    legitimate: [lotteglogis.com]
+    note: The Lotte name spans a large unrelated conglomerate; the logistics domain is the specific one.
+
+  - name: 로젠택배
+    english: iLogen
+    sector: delivery
+    terms: [ilogen]
+    legitimate: [ilogen.com]
+    note: Frequently spoofed in parcel-delivery texts despite being a smaller carrier.
+
+  # ------------------------------------------------------------------ telecom
+  - name: SK텔레콤
+    english: SK Telecom
+    sector: telecom
+    terms: [sktelecom, tworld]
+    legitimate: [sktelecom.com, tworld.co.kr, sk.com]
+    note: T world is the self-service portal customers are sent to for billing and plan changes.
+
+  - name: KT
+    english: KT Corporation
+    sector: telecom
+    terms: [ktshop, olleh]
+    legitimate: [kt.com, olleh.com, ktshop.co.kr]
+    note: >
+      The brand itself is two characters and cannot be queried as a substring without matching everything.
+      Watching the service names customers are sent to is the workable approximation, and it means a lookalike of
+      kt.com itself would be missed — recorded in docs/limits.md.
+
+  - name: LG유플러스
+    english: LG Uplus
+    sector: telecom
+    terms: [lguplus, uplus]
+    legitimate: [lguplus.com, uplus.co.kr, lgupluscorp.com]
+    note: The term 'uplus' is short but distinctive enough to be worth the noise it brings.
+
+# Words that turn a brand name into a credential-harvesting name. Presence of one alongside a brand term raises
+# confidence; absence does not lower it, since a bare lookalike domain is just as effective.
+lure_keywords:
+  - login
+  - signin
+  - secure
+  - verify
+  - update
+  - account
+  - auth
+  - support
+  - help
+  - confirm
+  - alert
+  - notice
+  - mobile
+  - app
+  - service
+  - center
+  - customer
+  - delivery
+  - parcel
+  - payment
+  - refund
+  - event

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Commit guard: this repository holds a watchlist, queries and analysis — never certificates, archives or binaries.
+# Enable once per clone:  git config core.hooksPath .githooks
+set -euo pipefail
+
+MAX_BYTES=$((1 * 1024 * 1024))
+REPO=$(git rev-parse --show-toplevel)
+failed=0
+
+refuse() { printf 'pre-commit: refusing %s — %s\n' "$1" "$2" >&2; failed=1; }
+
+# The watchlist is the premise of the project; an invalid one would silently poll nothing.
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '^config/brands.yaml$'; then
+  if ! "$REPO/scripts/check-watchlist.py" >/dev/null; then
+    printf 'pre-commit: config/brands.yaml does not validate — run scripts/check-watchlist.py\n' >&2
+    exit 1
+  fi
+fi
+
+while IFS= read -r -d '' path; do
+  size=$(git cat-file -s ":$path")
+  if ((size > MAX_BYTES)); then
+    refuse "$path" "staged blob is $size bytes (limit $MAX_BYTES); cached crt.sh responses belong in data/cache/"
+    continue
+  fi
+  magic=$(git cat-file blob ":$path" | head -c 8 | od -An -tx1 | tr -d ' \n' || true)
+  case "$magic" in
+    4d5a* | 7f454c46*) refuse "$path" "executable" ;;
+    504b0304* | 377abcaf271c* | 526172211a07*) refuse "$path" "archive" ;;
+    3082*) refuse "$path" "DER-encoded certificate or key — this project stores names, not certificates" ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+((failed)) && { printf 'pre-commit: commit blocked.\n' >&2; exit 1; } || true

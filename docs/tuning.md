@@ -4,6 +4,62 @@ Every false positive, what caused it, and what changed. Newest first.
 
 ---
 
+## 2026-09-17 — the first genuine finding, and three things it exposes
+
+Replaying the cached answers from the killed run surfaced **`woorlbank.com`** — `wooribank` with the `i` replaced by
+an `l`. It is the first candidate that looks like what this project was built to find.
+
+What the data shows, and nothing more:
+
+| | |
+|---|---|
+| Certificates | 1,829 |
+| Distinct names | 326, across three years (2023-10-28 → 2025-10-27) |
+| Names resembling remote access | 328 rows — `vpn.`, `sslvpn.`, `owa.`, `exchange.`, `citrix.`, `globalprotect.`, `fortigate.`, `ciscoasa.`, `rdweb.` |
+| Also present | randomised prefixes such as `axhuqwww.cpcontacts.`, `rmcqqryyyqimap.`, `cztoqhmirofirewall.` |
+| Issuer | Let's Encrypt |
+
+The randomised prefixes and the volume together mean issuance is automated: something requests a certificate for
+whatever hostname is asked for. **What that automation serves is not determinable from certificate data, and this
+project does not resolve or visit anything, so it is not determined here.** It could be phishing infrastructure, a
+sinkhole, a researcher's wildcard, or a squatter monetising traffic. What can be said is that the name is one
+character from a Korean bank's, and that somebody has been running automated certificate issuance on it for three
+years.
+
+Three gaps it exposes:
+
+1. **Volume is not a signal yet.** It scored 9 on two signals — homoglyph, and dedicated certificates — while 1,829
+   certificates across 326 names went uncounted. A parked squat does not look like this.
+2. **The threshold missed by one day.** Its history is exactly 730 days and `long_established` fires above 730, so
+   the penalty that would have been wrong here was avoided by luck rather than judgement. A signal that depends on a
+   coincidence is not yet a good signal.
+3. **The name set is itself evidence.** Hundreds of hostnames imitating VPN and webmail endpoints is a shape worth
+   scoring directly — far more telling than any count.
+
+**Change:** none yet. These are scoring changes and they deserve to be made deliberately, with the case in front of
+them, rather than tuned around a single example.
+
+---
+
+## 2026-09-17 — an hour of lookups, none of them stored
+
+The first scheduled run was killed by `TimeoutStartSec` after exactly one hour, having asked crt.sh about roughly 240
+names and stored **none** of them: `check.py` inserted only after its loop finished.
+
+The answers were not actually lost, because the response cache is written per request — `--offline` replayed 232 of
+them into the database afterwards, which is how `woorlbank.com` was found at all. But that was luck in the design,
+not intent.
+
+**Change:** answers are written in batches of 25, and `SIGTERM` and `SIGINT` stop the loop cleanly and store what has
+been collected. An interrupted run now keeps what it learned; asking crt.sh again for answers already received costs
+somebody else's service for nothing.
+
+**Change:** the budget is sized from measurement rather than optimism. A lookup costs about 17 seconds once the
+politeness pause and crt.sh's retries are counted, not the 7 seconds first estimated, so the nightly budget is 150
+(about 45 minutes) inside a 90-minute timeout. Full coverage takes about six weeks rather than three.
+
+---
+
 ## 2026-09-17 — the canary fired on its first scheduled night
 
 The nightly service was started for the first time and immediately aborted:

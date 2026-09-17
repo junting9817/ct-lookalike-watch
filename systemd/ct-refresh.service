@@ -9,9 +9,9 @@ Type=oneshot
 User=junting9817
 Group=junting9817
 WorkingDirectory=/home/junting9817/CT
-ExecStart=/home/junting9817/CT/scripts/refresh.sh --limit 250
-# 250 lookups at five seconds apart, plus crt.sh's retries, comfortably inside an hour.
-TimeoutStartSec=3600
+ExecStart=/home/junting9817/CT/scripts/refresh.sh --limit 150
+# Measured: a lookup costs about 17 s including the pause and crt.sh's retries, so 150 is roughly 45 minutes.
+TimeoutStartSec=5400
 MemoryMax=512M
 
 # Reads the lab's ClickHouse through the docker socket, writes only inside its own repository, and speaks to exactly

@@ -18,6 +18,7 @@ canary comes back empty the run stops rather than writing thousands of false abs
 Nothing here contacts a candidate domain; the only host spoken to is crt.sh.
 """
 import argparse
+import signal
 import sys
 import time
 from collections import Counter
@@ -32,6 +33,10 @@ from watchlist import WatchlistError, load  # noqa: E402
 
 CLASS_PRIORITY = ["homoglyph", "hyphen", "combosquat", "typo", "tld"]
 EPOCH = "1970-01-01 00:00:00"
+# Answers are written in batches rather than at the end. The first scheduled run was killed by its systemd timeout
+# after an hour of lookups and stored none of them, because the insert came after the loop. An interrupted run should
+# keep what it has already learned — crt.sh was asked, and asking again costs someone else's service.
+FLUSH_EVERY = 25
 
 
 def now() -> str:
@@ -162,8 +167,35 @@ def main() -> int:
     checks: list[dict] = []
     certificates: list[dict] = []
     tally: Counter = Counter()
+    written = 0
+
+    def flush() -> None:
+        """Store what has been answered so far. Safe to call at any point, including while stopping."""
+        nonlocal checks, certificates, written
+        if args.dry_run or not checks:
+            return
+        chquery.insert("ct.checks", checks)
+        if certificates:
+            chquery.insert("ct.certificates", certificates)
+            chquery.optimize("ct.certificates")
+        written += len(checks)
+        checks, certificates = [], []
+
+    # SIGTERM is how systemd ends a run that has outlived its timeout, and how a person ends one with Ctrl-C.
+    # Either way the loop stops at the next candidate and the answers already collected are stored.
+    stopping = False
+
+    def stop(signum, _frame):
+        nonlocal stopping
+        stopping = True
+        if log:
+            log(f"\n  stopping on signal {signum}: storing {len(checks)} answers already collected")
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
 
     for index, candidate in enumerate(selected):
+        if stopping:
+            break
         if index and not args.offline:
             time.sleep(args.pause)
         answer = oracle.lookup(candidate["domain"], offline=args.offline, log=log)
@@ -172,6 +204,8 @@ def main() -> int:
         tally[answer.status] += 1
         checks.append({"domain": candidate["domain"], "checked_at": seen_at, "status": answer.status,
                        "seconds": round(answer.seconds, 2), "detail": answer.detail[:255], **summary})
+        if len(checks) >= FLUSH_EVERY:
+            flush()
         if log:
             if answer.status == "found":
                 shown = candidate["display"] if candidate["display"] != candidate["domain"] else ""
@@ -180,16 +214,13 @@ def main() -> int:
             elif answer.status == "error":
                 log(f"  error  {candidate['domain']:<38} {answer.detail}")
 
-    if not args.dry_run:
-        chquery.insert("ct.checks", checks)
-        if certificates:
-            chquery.insert("ct.certificates", certificates)
-            chquery.optimize("ct.certificates")
+    flush()
 
+    asked = sum(tally.values())
     found = tally["found"]
-    print(f"\ncheck: asked about {len(selected)} names — {found} exist, {tally['absent']} do not, "
+    print(f"\ncheck: asked about {asked} of {len(selected)} selected names — {found} exist, {tally['absent']} do not, "
           f"{tally['error']} could not be answered"
-          + (f"; {len(certificates)} certificate names stored" if certificates and not args.dry_run else "")
+          + (f"; stopped early, {written} answers stored" if stopping else "")
           + (" (--dry-run: nothing written)" if args.dry_run else ""), file=sys.stderr)
     return 0
 

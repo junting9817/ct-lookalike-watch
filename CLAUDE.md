@@ -23,11 +23,17 @@ with the false-positive work shown.**
 
 Decisions:
 
-- **C1 — Poll an index, do not drink the firehose** (my decision, 2026-09-16). Certificate Transparency issues roughly
-  15 million certificates a day; parsing that stream on a 2 vCPU VM that already runs Suricata, Zeek, ClickHouse and
-  Grafana is not realistic. This project queries crt.sh for its watchlist terms instead, and **describes itself
-  accurately as a monitor rather than a firehose consumer.** Measured 2026-09-16: a substring query returns in about
-  7 seconds, and crt.sh answers 502 often enough that backoff is mandatory.
+- **C1 — Generate the impersonations, then ask whether they exist** (revised 2026-09-17 after measurement).
+  The original plan was to query crt.sh for substrings of each brand name. Measurement killed it: a substring query
+  is an unindexed scan, and crt.sh answers it with a 502, a timeout, or — worst of all — **HTTP 200 and an empty
+  array**, which looks exactly like "nothing matched". Its PostgreSQL interface, the documented way to run such
+  queries, refuses connections on IPv4 and this VM has no IPv6 route.
+  Exact-domain lookups are indexed and reliable: 1.3–2.8 s, with a clear 404 or empty result when a name has no
+  certificate. So the project is inverted. It generates the names an impersonator would plausibly register —
+  homoglyph and punycode forms, typo classes, hyphen insertions, lure-keyword combosquats — and asks Certificate
+  Transparency which of them actually exist. The generator is the substance of the project; crt.sh is only the oracle.
+  **The limit this accepts:** it can only find impersonations it thought to generate. A firehose consumer would find
+  the unanticipated ones, and does not fit on this VM (C7).
 - **C2 — One ClickHouse, separate database.** The `ct` database lives in the lab's existing container, as `~/EP` does
   with `ep`. The lab's `nsm` database is never written to.
 - **C3 — Nothing is ever resolved, fetched or visited.** Not the candidate domains, not their certificates' URLs, not
@@ -40,8 +46,13 @@ Decisions:
   never "this is phishing". These are real domains, most flagged names will be innocent, and an unverified public
   accusation is a category of harm my other projects do not carry.
 - **C6 — Rate limiting is a courtesy, not a setting.** crt.sh is free and run by someone else. Requests are sequential,
-  at least five seconds apart, retried with backoff, cached on disk, and sent with a User-Agent that identifies the
-  project.
+  spaced apart, retried with backoff, cached on disk, and sent with a User-Agent that identifies the project. The
+  candidate budget per run is capped and printed, so the cost to that service is a number someone decided rather than
+  a number that grew.
+- **C7 — A canary query proves the oracle is answering.** Because crt.sh can return an empty success, every run first
+  asks for a domain that certainly has certificates. If the canary comes back empty, the run aborts instead of
+  recording thousands of names as "no certificate found". An answer that is wrong in the shape of a right answer is
+  the failure this project is most exposed to.
 
 ## Safety rules (never violate)
 
@@ -63,8 +74,9 @@ CT/
 ├── scripts/
 │   ├── check-watchlist.py          # validate; --plan shows the requests a poll would make, without making them
 │   ├── lib/watchlist.py            # loading and validation
-│   ├── poll.py                     # crt.sh -> ct.certificates                        (Phase 2)
-│   ├── score.py                    # resemblance scoring, punycode and confusables     (Phase 3)
+│   ├── lib/candidates.py           # the generator: homoglyph, hyphen, combosquat, typo, tld
+│   ├── generate-candidates.py      # the imagined space -> ct.candidates               (Phase 2)
+│   ├── check.py                    # crt.sh oracle -> ct.checks, ct.certificates       (Phase 3)
 │   └── report.py                   # the page                                          (Phase 4)
 ├── schema/                         # ClickHouse DDL for the ct database
 ├── data/                           # cursors and caches
@@ -78,10 +90,12 @@ CT/
 
 - **Phase 1**: repository, watchlist, validation. Done when the watchlist validates, `--plan` prints the exact requests
   a poll would make without making any, and a legitimate domain is correctly recognised as the brand's own.
-- **Phase 2**: `poll.py` and the `ct` schema — crt.sh with backoff and a cursor, into ClickHouse. Done when a second
-  run adds no duplicates and the cursor advances.
-- **Phase 3**: `score.py` — punycode decoding, confusable normalisation, typo and combosquat classes, suppression of
-  brands' own certificates. Done when every legitimate certificate scores zero and crafted lookalikes score high.
+- **Phase 2**: the candidate generator and the `ct` schema — homoglyph, typo, hyphen and combosquat classes, a printed
+  budget, and deterministic output. Done when the same watchlist produces the same candidates twice and the plan can
+  be reviewed before any request is made.
+- **Phase 3**: `check.py` — the crt.sh oracle with its canary, backoff and cache, recording which candidates exist.
+  Done when a second run adds no duplicates, and a deliberately broken oracle aborts the run instead of recording
+  everything as absent.
 - **Phase 4**: a Grafana dashboard (this data is live, so the dashboard is finally the right tool) and a page.
 - **Phase 5**: scheduling, the tuning log, and `docs/limits.md`.
 
@@ -102,6 +116,11 @@ CT/
 
 ## Progress
 
+- Phase 2: built 2026-09-17 (`lib/candidates.py`, `generate-candidates.py`, `schema/001_ct.sql`). 6,401 candidates
+  from 14 brands: 2,946 typo, 1,458 combosquat, 1,196 homoglyph, 504 hyphen, 297 TLD — of which **936 are punycode**,
+  the class a reader cannot catch by eye. Deterministic and idempotent: a second run leaves 6,401 rows for 6,401
+  distinct names. Checking all of them would take about 12.4 hours at 7 s per lookup, which is why Phase 3 budgets
+  and rotates instead of sweeping. Waiting for my confirmation
 - Phase 1: built 2026-09-16. Watchlist validates: 14 brands (7 banking, 4 delivery, 3 telecom), 27 unique terms,
   22 lure keywords; `--plan` estimates 27 requests over about 6 minutes and makes none. The validator earns its keep —
   it refused `kbfg` as too short until it was excepted with a reason, and it caught three YAML notes that began with a

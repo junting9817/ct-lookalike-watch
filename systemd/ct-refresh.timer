@@ -1,0 +1,12 @@
+[Unit]
+Description=Ask about a budget of lookalike candidates every night
+
+[Timer]
+OnCalendar=*-*-* 03:40:00 UTC
+# A missed night (VM stopped, maintenance) runs once after boot rather than leaving a gap in coverage.
+Persistent=true
+AccuracySec=5min
+RandomizedDelaySec=20min
+
+[Install]
+WantedBy=timers.target

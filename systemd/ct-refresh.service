@@ -1,0 +1,31 @@
+[Unit]
+Description=Ask Certificate Transparency about a budget of lookalike candidates
+Documentation=file:/home/junting9817/CT/docs/method.md
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=junting9817
+Group=junting9817
+WorkingDirectory=/home/junting9817/CT
+ExecStart=/home/junting9817/CT/scripts/refresh.sh --limit 250
+# 250 lookups at five seconds apart, plus crt.sh's retries, comfortably inside an hour.
+TimeoutStartSec=3600
+MemoryMax=512M
+
+# Reads the lab's ClickHouse through the docker socket, writes only inside its own repository, and speaks to exactly
+# one host on the internet.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/junting9817/CT
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

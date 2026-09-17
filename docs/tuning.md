@@ -4,6 +4,36 @@ Every false positive, what caused it, and what changed. Newest first.
 
 ---
 
+## 2026-09-17 — the canary fired on its first scheduled night
+
+The nightly service was started for the first time and immediately aborted:
+
+```
+== 2/3  asking crt.sh about 250 candidates
+check: ABORTED — the canary kbstar.com came back 'absent' (HTTP 404).
+       crt.sh is not answering truthfully, and recording 250 names as absent on the
+       strength of that would be worse than recording nothing.
+```
+
+`kbstar.com` holds 4,114 certificates, and crt.sh had answered for it correctly twenty minutes earlier. This is
+exactly the failure decision C7 exists for, caught in production on the first run — 250 names would otherwise have
+been recorded as having no certificate, every one of them wrongly, and the record would have looked like a clean
+night's work.
+
+**Change:** the canary is now stubborn rather than single-shot. It tries **three names from three different brands**,
+up to **three times**, waiting 20 seconds between rounds, and aborts only when none can be confirmed. Being stubborn
+is safe here in a way it would not be for a candidate: a name that is *supposed* to have certificates cannot be
+wrongly confirmed by retrying, only wrongly denied. Using several brands also means one brand's own migration cannot
+masquerade as a crt.sh failure.
+
+Re-run after the change: the canary confirmed on a later attempt and the night proceeded.
+
+**Not changed:** the service still exits non-zero when the canary cannot be confirmed, and systemd still marks it
+failed. A night that could not be trusted should be visible as a failure, not smoothed over — the alternative is a
+timer that appears to be working while coverage silently stops advancing.
+
+---
+
 ## 2026-09-17 — the first 89 answers, and what they taught
 
 The first batches asked about 89 candidates across three classes. Results:

@@ -116,8 +116,9 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=50, help="how many candidates to ask about (default 50)")
     parser.add_argument("--klass", choices=CLASS_PRIORITY, help="only this class of candidate")
     parser.add_argument("--brand", help="only this brand")
-    parser.add_argument("--canary", help="the name used to prove the oracle is answering "
-                                         "(default: the first brand's first legitimate domain)")
+    parser.add_argument("--canary", nargs="+", metavar="DOMAIN",
+                        help="names used to prove the oracle is answering "
+                             "(default: one legitimate domain from each of the first three brands)")
     parser.add_argument("--pause", type=float, default=oracle.SECONDS_BETWEEN_REQUESTS,
                         help=f"seconds between requests (default {oracle.SECONDS_BETWEEN_REQUESTS})")
     parser.add_argument("--offline", action="store_true", help="use cached answers; make no request")
@@ -132,7 +133,8 @@ def main() -> int:
     log = None if args.quiet else (lambda message: print(message, file=sys.stderr))
     try:
         watchlist = load()
-        canary_domain = args.canary or watchlist.brands[0].legitimate[0]
+        # Several brands, so one brand's outage or migration cannot look like a crt.sh failure.
+        canary_domains = args.canary or [b.legitimate[0] for b in watchlist.brands[:3] if b.legitimate]
         selected = overdue(args.limit, args.klass, args.brand)
     except (WatchlistError, chquery.QueryError, IndexError) as exc:
         print(f"check: {exc}", file=sys.stderr)
@@ -145,15 +147,16 @@ def main() -> int:
 
     # ---------------------------------------------------------------- the canary (C7)
     if log:
-        log(f"canary: asking about {canary_domain}, which certainly has certificates")
-    proof = oracle.canary(canary_domain, offline=args.offline, log=log)
+        log(f"canary: asking about {', '.join(canary_domains)} — all of which certainly have certificates")
+    proof = oracle.canary(canary_domains, offline=args.offline, log=log)
     if proof.status != "found":
-        print(f"check: ABORTED — the canary {canary_domain} came back '{proof.status}' ({proof.detail}).\n"
+        print(f"check: ABORTED — no canary could be confirmed after {oracle.CANARY_ATTEMPTS} attempts "
+              f"(last: {proof.domain} '{proof.status}', {proof.detail}).\n"
               f"       crt.sh is not answering truthfully, and recording {len(selected)} names as absent on the "
               f"strength of that would be worse than recording nothing.", file=sys.stderr)
         return 1
     if log:
-        log(f"canary: {proof.detail} in {proof.seconds:.1f}s — the oracle is answering\n")
+        log(f"canary: {proof.domain} has {proof.detail} — the oracle is answering\n")
 
     seen_at = now()
     checks: list[dict] = []

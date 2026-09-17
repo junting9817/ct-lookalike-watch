@@ -112,9 +112,34 @@ def lookup(domain: str, *, offline: bool = False, log=None) -> Answer:
     return Answer(domain, "error", detail, ATTEMPTS, time.monotonic() - started)
 
 
-def canary(domain: str, *, offline: bool = False, log=None) -> Answer:
-    """Ask about a name that certainly has certificates, to find out whether the oracle is telling the truth."""
-    return lookup(domain, offline=offline, log=log)
+CANARY_ATTEMPTS = 3
+CANARY_WAIT_SECONDS = 20
+
+
+def canary(domains: list[str], *, offline: bool = False, log=None) -> Answer:
+    """Establish that the oracle is answering truthfully, or report that it is not.
+
+    A single failure proves nothing: the first scheduled run of this project was aborted by crt.sh returning HTTP 404
+    for a name holding 4,114 certificates, which it had answered correctly minutes earlier. So the canary is
+    stubborn — several names, several attempts, with a wait between — and gives up only when none of them can be
+    confirmed. Being stubborn here is safe in a way that being stubborn about a candidate is not: a name that is
+    *supposed* to have certificates cannot be wrongly confirmed, only wrongly denied.
+    """
+    last = Answer(domains[0] if domains else "", "error", "no canary configured")
+    for attempt in range(1, CANARY_ATTEMPTS + 1):
+        for domain in domains:
+            answer = lookup(domain, offline=offline, log=log)
+            if answer.status == "found":
+                return answer
+            last = answer
+            if log:
+                log(f"canary: {domain} came back '{answer.status}' ({answer.detail})")
+        if attempt < CANARY_ATTEMPTS and not offline:
+            if log:
+                log(f"canary: no name confirmed; waiting {CANARY_WAIT_SECONDS}s before attempt "
+                    f"{attempt + 1}/{CANARY_ATTEMPTS}")
+            time.sleep(CANARY_WAIT_SECONDS)
+    return last
 
 
 def names_in(row: dict) -> list[str]:

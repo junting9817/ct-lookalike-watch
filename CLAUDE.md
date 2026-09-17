@@ -116,6 +116,11 @@ CT/
 
 ## Progress
 
+- Phase 5: built 2026-09-17 (`refresh.sh`, `systemd/ct-refresh.{service,timer}`, `install-timer.sh`). Nightly at
+  03:40 UTC, 250 candidates a night — roughly three weeks to a full pass, after which the rotation re-asks the oldest
+  answers so an absence never quietly becomes a claim about the present. The first scheduled run aborted on the
+  canary (crt.sh returned 404 for a name with 4,114 certificates); the canary is now three names from three brands,
+  three attempts, and the re-run proceeded. Waiting for my confirmation
 - Phase 4: **complete** 2026-09-17. Dashboard `CT — brand lookalikes` provisioned and live in the lab's Grafana
   (uid `ct-lookalikes`, NSM folder, 11 panels, every query verified against real data). `grafana_ro` was granted
   SELECT on `ct.*` in the lab's users.d and the config hot-reloaded — no restart, no compose change, no new exposure.

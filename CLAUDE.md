@@ -116,6 +116,11 @@ CT/
 
 ## Progress
 
+- Phase 4: **complete** 2026-09-17. Dashboard `CT — brand lookalikes` provisioned and live in the lab's Grafana
+  (uid `ct-lookalikes`, NSM folder, 11 panels, every query verified against real data). `grafana_ro` was granted
+  SELECT on `ct.*` in the lab's users.d and the config hot-reloaded — no restart, no compose change, no new exposure.
+  Installed by copying into the lab's provisioned directory rather than adding a mount, so the internet-facing
+  Grafana never had to be restarted; `scripts/install-dashboard.sh --remove` undoes it
 - Phase 4 (scoring half): built 2026-09-17 (`lib/scoring.py`, `score.py`, `ct.findings`, `generic_terms` in the
   watchlist). Twelve named signals with weights; a finding lists the ones that fired, in words. On the 11 existing
   names it puts `kbfg.shop` and `nonghyup.org` at the top and every established business at 0. It also corrected a

@@ -116,6 +116,12 @@ CT/
 
 ## Progress
 
+- Phase 4 (scoring half): built 2026-09-17 (`lib/scoring.py`, `score.py`, `ct.findings`, `generic_terms` in the
+  watchlist). Twelve named signals with weights; a finding lists the ones that fired, in words. On the 11 existing
+  names it puts `kbfg.shop` and `nonghyup.org` at the top and every established business at 0. It also corrected a
+  wrong finding of mine: certificates here carry at most six names, not dozens, so the signal is whether *any*
+  unrelated name shares the certificate, not how many. The dashboard half needs `grafana_ro` granted SELECT on `ct`,
+  which is a lab change and needs my agreement first. Waiting for my confirmation
 - Phase 3: built 2026-09-17 (`lib/oracle.py`, `check.py`, `docs/method.md`, `docs/tuning.md`, `docs/limits.md`).
   89 candidates asked about: 30 homoglyph (0 exist), 45 combosquat (0 exist), 14 TLD-swap (11 exist, 1,712
   certificate names stored). The canary works both ways — it confirmed 4,114 certificates for the control name before

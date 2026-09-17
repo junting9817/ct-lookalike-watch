@@ -56,3 +56,20 @@ ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(ingested_at)
 ORDER BY (name, crtsh_id)
 TTL ingested_at + INTERVAL 24 MONTH;
+
+-- What a person should actually look at. Rewritten on every scoring run: the score depends on when it was computed
+-- (a name is "young" only for a while), so the latest row for a name is the only one that means anything.
+CREATE TABLE IF NOT EXISTS ct.findings
+(
+    `domain`    String,
+    `display`   String,                    -- what a reader sees, which for a homoglyph is not the domain
+    `brand`     LowCardinality(String),
+    `klass`     LowCardinality(String),
+    `score`     UInt16,
+    `tier`      LowCardinality(String),    -- review | watch | weak | noise
+    `signals`   Array(String),             -- the named signals that fired
+    `reasons`   Array(String),             -- the same, in words, for whoever has to act on it
+    `scored_at` DateTime('UTC')
+)
+ENGINE = ReplacingMergeTree(scored_at)
+ORDER BY domain;

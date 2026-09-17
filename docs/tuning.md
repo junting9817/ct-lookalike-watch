@@ -30,17 +30,29 @@ therefore matches any unrelated business that happens to share the word.
 (Phase 4): the `tld` class must not count as resemblance on its own, and terms that are dictionary words need to be
 marked as such in the watchlist so their `tld` hits start from a lower base.
 
-### 2. Certificate counts are inflated by shared hosting certificates
+### 2. Certificate counts mean little — but I first got the reason wrong
 
-`shinhan.top` looked significant at 64 certificates. Then the names on those certificates turned out to include
-`aac123.xyz`, `mixxx.fun` and `moviezwap.cool` — it is riding multi-name certificates issued by a hosting provider,
-where dozens of unrelated domains share one certificate. `epost.site` is the same story with a different issuer.
+`shinhan.top` looked significant at 64 certificates, and the names on them included `aac123.xyz`, `mixxx.fun` and
+`moviezwap.cool`. I wrote that it was riding batch certificates where *dozens* of unrelated domains share one
+certificate. **That was wrong, and the data says so.** The largest certificate here carries six names; the typical one
+carries between one and three:
 
-So "64 certificates" measures the hosting provider's batching, not the domain's importance.
+```
+candidate         max names per cert   avg   certs
+uplus.co                           6   1.3     754
+koreapost.net                      3   2.2      75
+shinhan.top                        3   1.5      64
+```
 
-**Change:** scoring must look at what else is on the certificate. A candidate that is the certificate's only name, or
-one of two, is a different object from a candidate that is one of forty. The count alone is not a signal, and the
-page must not present it as one.
+The real pattern is Cloudflare's: one certificate per site, carrying `domain`, `*.domain` and
+`sni.cloudflaressl.com`, and occasionally pairing two unrelated customers on one certificate. So the 64 is a busy
+site renewing over five years, not a batching artefact.
+
+**Change:** the signal is not how many names share a certificate but **whether any unrelated name does at all**.
+`foreign_names` counts names on the candidate's certificates that are neither the candidate, nor a subdomain of it,
+nor CDN filler. Zero means the certificate was obtained for this name (`dedicated_certificate`, +3); one or more
+means a shared or reseller arrangement (`co_tenanted`, −3). Cloudflare's own `sni.cloudflaressl.com` is excluded,
+because it appears on every such certificate and says nothing about who else is there.
 
 ### 3. The interesting hits are the quiet ones
 

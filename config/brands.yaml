@@ -122,6 +122,18 @@ brands:
     legitimate: [lguplus.com, uplus.co.kr, lgupluscorp.com]
     note: The term 'uplus' is short but distinctive enough to be worth the noise it brings.
 
+# Terms that are also ordinary words. A business anywhere may legitimately use one, so the bare term appearing under
+# another suffix says nothing — epost.site, doortodoor.info and uplus.co all exist and none of them needs anything to
+# do with Korea Post, CJ Logistics or LG Uplus. Scoring starts these from a lower base; they still earn their score
+# when a typo or a homoglyph is involved, because nobody registers a misspelling of an ordinary word by accident.
+generic_terms:
+  - epost
+  - doortodoor
+  - uplus
+  - olleh
+  - tworld
+  - ilogen
+
 # Words that turn a brand name into a credential-harvesting name. Presence of one alongside a brand term raises
 # confidence; absence does not lower it, since a bare lookalike domain is just as effective.
 lure_keywords:

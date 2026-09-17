@@ -48,6 +48,11 @@ class Brand:
 class Watchlist:
     brands: list[Brand]
     lure_keywords: list[str]
+    generic_terms: list[str] = field(default_factory=list)
+
+    def is_generic(self, term: str) -> bool:
+        """True when the term is also an ordinary word, so its bare appearance elsewhere means little."""
+        return term in self.generic_terms
 
     @property
     def terms(self) -> list[str]:
@@ -136,6 +141,11 @@ def load(path: Path = WATCHLIST) -> Watchlist:
     if len(set(keywords)) != len(keywords):
         problems.append("lure_keywords contains duplicates")
 
+    generic = [str(word).strip().lower() for word in (document.get("generic_terms") or [])]
+    for term in generic:
+        if term not in seen_terms:
+            problems.append(f"generic term '{term}' is not a watchlist term, so marking it generic does nothing")
+
     if problems:
         raise WatchlistError("the watchlist has problems:\n  - " + "\n  - ".join(problems))
-    return Watchlist(brands=brands, lure_keywords=keywords)
+    return Watchlist(brands=brands, lure_keywords=keywords, generic_terms=generic)

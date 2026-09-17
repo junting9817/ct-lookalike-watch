@@ -66,8 +66,12 @@ def overdue(limit: int, klass: str | None, brand: str | None) -> list[dict]:
         SELECT c.domain AS domain, c.display AS display, c.brand AS brand, c.klass AS klass, c.note AS note,
                ifNull(k.last_checked, toDateTime('{EPOCH}', 'UTC')) AS last_checked
         FROM ct.candidates AS c
-        LEFT JOIN (SELECT domain, max(checked_at) AS last_checked FROM ct.checks GROUP BY domain) AS k
-               ON c.domain = k.domain
+        LEFT JOIN (
+            -- Only an answer counts as having been checked. Errors are recorded, because a run of them says
+            -- something about crt.sh, but letting one push a name to the back of the queue would starve exactly the
+            -- names crt.sh finds hardest to answer.
+            SELECT domain, maxIf(checked_at, status != 'error') AS last_checked FROM ct.checks GROUP BY domain
+        ) AS k ON c.domain = k.domain
         WHERE {' AND '.join(filters)}
         ORDER BY last_checked ASC, {priority} ASC, cityHash64(domain) ASC
         LIMIT {int(limit)}""", params)

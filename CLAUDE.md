@@ -116,6 +116,14 @@ CT/
 
 ## Progress
 
+- Phase 3: built 2026-09-17 (`lib/oracle.py`, `check.py`, `docs/method.md`, `docs/tuning.md`, `docs/limits.md`).
+  89 candidates asked about: 30 homoglyph (0 exist), 45 combosquat (0 exist), 14 TLD-swap (11 exist, 1,712
+  certificate names stored). The canary works both ways — it confirmed 4,114 certificates for the control name before
+  each batch, and aborted the run when pointed at a name that cannot exist. Two rotation bugs found by running it:
+  alphabetical tie-breaking marched through the space instead of sampling it, and an error counted as "checked" so
+  the hardest names would have been asked about least. Both fixed. First tuning findings recorded: dictionary-word
+  terms collide with unrelated businesses, and certificate counts are inflated by shared hosting certificates.
+  Waiting for my confirmation
 - Phase 2: built 2026-09-17 (`lib/candidates.py`, `generate-candidates.py`, `schema/001_ct.sql`). 6,401 candidates
   from 14 brands: 2,946 typo, 1,458 combosquat, 1,196 homoglyph, 504 hyphen, 297 TLD — of which **936 are punycode**,
   the class a reader cannot catch by eye. Deterministic and idempotent: a second run leaves 6,401 rows for 6,401

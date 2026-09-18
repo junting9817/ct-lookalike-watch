@@ -116,6 +116,10 @@ CT/
 
 ## Progress
 
+- Scoring pass 2026-09-18 after the first scheduled night: penalties now apply only to the `tld` class, where
+  resemblance can be coincidence — longevity is not innocence for a homoglyph. Added `recently_issued`,
+  `reactivated` and `high_volume`. Three homoglyph findings now sit in `review`: `cjlogistlcs.com` (dormant four
+  years, reissued six days ago), `tvvorld.com`, `woorlbank.com`. Coverage 7.5%, nightly run clean in 37 minutes
 - Phase 5: built 2026-09-17 (`refresh.sh`, `systemd/ct-refresh.{service,timer}`, `install-timer.sh`). Nightly at
   03:40 UTC, 250 candidates a night — roughly three weeks to a full pass, after which the rotation re-asks the oldest
   answers so an absence never quietly becomes a claim about the present. The first scheduled run aborted on the

@@ -4,6 +4,55 @@ Every false positive, what caused it, and what changed. Newest first.
 
 ---
 
+## 2026-09-18 — the scoring pass, with three cases instead of one
+
+The first scheduled night added `cjlogistlcs.com` (CJ Logistics with `i` written as `l`) and `tvvorld.com` (`tworld`
+with `w` written as `vv`). With `woorlbank.com` that is three homoglyph findings — enough to tune against without
+fitting the rules to a single example.
+
+`cjlogistlcs.com` is what forced the pass. Two Let's Encrypt certificates in June 2022, expired, then **four years of
+silence**, then a fresh SSL.com certificate six days ago valid into 2027. The old scoring put it in `weak`, below
+`kbfg.shop`, because its four-year span tripped the *established business* penalty — a penalty earned by trading
+continuously, applied here to a name that had done nothing at all.
+
+### What changed
+
+**Penalties now apply only where the resemblance could be coincidence.** This is the principled fix. The
+`long_established` and `generic_term` penalties exist for one situation: a brand term that is an ordinary word, which
+somebody else uses legitimately. That is a TLD-swap problem. Nobody registers a homoglyph, a typo or a hyphenated
+brand name by accident, so for those classes a long history is not innocence — it is a lookalike that has been
+running for years. `woorlbank.com` had been scored *down* for exactly that.
+
+**Three signals added:**
+
+| Signal | Weight | Fires when |
+|---|---|---|
+| `recently_issued` | +3 | a certificate arrived in the last 30 days — the name is in use now, not historically |
+| `reactivated` | +4 | silent for a year or more, with 20 certificates or fewer in total, then issued again |
+| `high_volume` | +2 | 100 certificates or more: running infrastructure rather than a parked name |
+
+**And one correction inside the same pass.** The first version of `reactivated` fired on any gap over a year, which
+promoted `uplus.co` — 754 certificates since 2017 with one 28-month quiet spell — from `noise` to `weak`. A name with
+hundreds of certificates and a gap is a business that had a gap. The signal now requires the name to have almost no
+history *besides* the reactivation, which is the thing that makes it interesting.
+
+### Before and after
+
+| Name | Was | Now |
+|---|---|---|
+| `cjlogistlcs.com` | 5 weak | **16 review** — dormant four years, reissued six days ago |
+| `tvvorld.com` | — | **13 review** — silent 25 months, then reissued |
+| `woorlbank.com` | 9 watch | **11 review** — 1,829 certificates now counted |
+| `uplus.co` | 0 noise → 3 weak (regression) | 0 noise |
+| `shinhan.top`, `doortodoor.info`, `tworld.online`, `epost.site`, `koreapost.net` | 0 noise | 0 noise |
+
+Three to review, two to watch, three weak, six noise — from 14 names that exist out of 520 asked about.
+
+**Still not claimed:** none of the three is called phishing. Nothing was resolved or visited. What is observable is
+the name, its shape, and its timing.
+
+---
+
 ## 2026-09-17 — the first genuine finding, and three things it exposes
 
 Replaying the cached answers from the killed run surfaced **`woorlbank.com`** — `wooribank` with the `i` replaced by

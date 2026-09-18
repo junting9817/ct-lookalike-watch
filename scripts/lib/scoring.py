@@ -25,6 +25,9 @@ WEIGHTS: dict[str, int] = {
     "lure_keyword": 2,          # ...-login, ...-secure: the name states its purpose
     "dedicated_certificate": 3,  # nothing else rides on the certificate: it was obtained for this name
     "young": 3,                 # first certificate inside the recency window
+    "recently_issued": 3,       # a certificate arrived in the last few weeks — this name is in use now
+    "reactivated": 4,           # dormant for a year or more, then issued again: somebody picked it back up
+    "high_volume": 2,           # hundreds of certificates is running infrastructure, not a parked name
     "burst": 2,                 # certificates arrive close together and stop
     "co_tenanted": -3,          # unrelated names share the certificate — a reseller or shared hosting arrangement
     "long_established": -4,     # a certificate history measured in years
@@ -35,9 +38,23 @@ TIERS = [(10, "review"), (6, "watch"), (3, "weak")]
 DEFAULT_TIER = "noise"
 
 RECENT_DAYS = 180
+RECENTLY_ISSUED_DAYS = 30
+DORMANT_DAYS = 365
+# Reactivation only means something when there is almost nothing else. A name with hundreds of certificates and one
+# quiet spell is a business that had a quiet spell; uplus.co has 754 certificates since 2017 and a 28-month gap, and
+# reading that as "somebody picked this name back up" promoted it out of the noise it belongs in.
+REACTIVATION_MAX_CERTIFICATES = 20
+HIGH_VOLUME_CERTIFICATES = 100
 BURST_DAYS = 21
 BURST_MAX_CERTIFICATES = 6
 ESTABLISHED_DAYS = 730
+
+# The penalties exist for one situation: a name that resembles a brand *by coincidence*, because the brand's term is
+# an ordinary word that somebody else uses legitimately. That is a TLD-swap problem. Nobody registers a homoglyph, a
+# typo or a hyphenated brand name by accident, so for those classes a long history is not innocence — it is a
+# lookalike that has been running for years. Applying the penalties there is how woorlbank.com, three years of
+# automated issuance on a bank's misspelled name, was scored down for its longevity.
+COINCIDENCE_POSSIBLE_CLASSES = {"tld"}
 
 
 @dataclass
@@ -108,14 +125,28 @@ def score_candidate(row: dict, *, as_of: str, lure_keywords: list[str], is_gener
 
     history = days_between(first, last)
     age = days_between(first, as_of)
+    since_last = days_between(last, as_of)
+    gap = int(row.get("max_gap_days") or 0)
+    coincidence_possible = klass in COINCIDENCE_POSSIBLE_CLASSES
+
     if age and age <= RECENT_DAYS:
         fire("young", f"first certificate {age} days ago")
-    if history > ESTABLISHED_DAYS:
-        fire("long_established", f"certificates spanning {history // 365} years — an established business")
+    if last and since_last <= RECENTLY_ISSUED_DAYS:
+        fire("recently_issued", f"a certificate was issued {max(since_last, 1)} days ago — this name is in use now")
+    reactivated = gap >= DORMANT_DAYS and certificates <= REACTIVATION_MAX_CERTIFICATES
+    if reactivated:
+        fire("reactivated", f"silent for {gap // 30} months with only {certificates} certificates in total, then "
+                            f"issued again — somebody picked this name back up")
+    if certificates >= HIGH_VOLUME_CERTIFICATES:
+        fire("high_volume", f"{certificates:,} certificates — running infrastructure, not a parked name")
     if certificates and certificates <= BURST_MAX_CERTIFICATES and history <= BURST_DAYS and first:
         fire("burst", f"all {certificates} certificates within {max(history, 1)} day{'' if history == 1 else 's'}")
 
-    if is_generic:
+    # Longevity and ordinary-word penalties apply only where the resemblance could be coincidence.
+    if coincidence_possible and history > ESTABLISHED_DAYS and not reactivated:
+        fire("long_established",
+             f"{history // 365} years of continuous renewals — an established business, not a dormant squat")
+    if coincidence_possible and is_generic:
         fire("generic_term", "the brand term is also an ordinary word, so others use it legitimately")
 
     score = max(0, sum(WEIGHTS.get(signal, 0) for signal in signals))

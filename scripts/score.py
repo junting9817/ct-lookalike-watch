@@ -31,7 +31,11 @@ SELECT c.domain AS domain, any(c.display) AS display, any(c.brand) AS brand, any
                    AND e.name != concat('*.', c.domain)
                    AND NOT endsWith(e.name, concat('.', c.domain))
                    AND NOT endsWith(e.name, 'cloudflaressl.com')) AS foreign_names,
-       min(e.not_before) AS first_not_before, max(e.not_before) AS last_not_before
+       min(e.not_before) AS first_not_before, max(e.not_before) AS last_not_before,
+       -- The longest silence between two issuances. A business renews continuously; a name that goes quiet for
+       -- years and then gets a fresh certificate has been picked back up by somebody.
+       intDiv(arrayMax(arrayDifference(arraySort(groupUniqArray(toUnixTimestamp(e.not_before))))), 86400)
+           AS max_gap_days
 FROM ct.certificates AS e
 INNER JOIN ct.candidates AS c ON c.domain = e.candidate
 GROUP BY domain

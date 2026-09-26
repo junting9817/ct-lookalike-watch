@@ -17,6 +17,8 @@ except ImportError:  # pragma: no cover - the installer names the package
 
 REPO = Path(__file__).resolve().parent.parent.parent
 WATCHLIST = REPO / "config" / "brands.yaml"
+REVIEWED = REPO / "config" / "reviewed.yaml"
+VERDICTS = {"brand-owned", "third-party", "suspicious", "unknown"}
 
 MIN_TERM_LENGTH = 5
 TERM_RE = re.compile(r"^[a-z0-9-]+$")
@@ -149,3 +151,41 @@ def load(path: Path = WATCHLIST) -> Watchlist:
     if problems:
         raise WatchlistError("the watchlist has problems:\n  - " + "\n  - ".join(problems))
     return Watchlist(brands=brands, lure_keywords=keywords, generic_terms=generic)
+
+
+def load_verdicts(path: Path = REVIEWED) -> dict[str, dict]:
+    """Human verdicts by domain, from config/reviewed.yaml. A missing file means nobody has reviewed anything yet."""
+    if yaml is None:
+        raise WatchlistError("PyYAML is not installed")
+    if not path.is_file():
+        return {}
+    try:
+        document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise WatchlistError(f"{path}: {exc}") from None
+    entries = document.get("verdicts") or []
+    if not isinstance(entries, list):
+        raise WatchlistError(f"{path}: 'verdicts' must be a list")
+    found: dict[str, dict] = {}
+    problems: list[str] = []
+    for index, entry in enumerate(entries, 1):
+        if not isinstance(entry, dict):
+            problems.append(f"verdict #{index}: expected a mapping")
+            continue
+        domain = str(entry.get("domain", "")).strip().lower()
+        verdict = str(entry.get("verdict", "")).strip().lower()
+        if not domain:
+            problems.append(f"verdict #{index}: needs a domain")
+        if verdict not in VERDICTS:
+            problems.append(f"'{domain}': verdict '{verdict}' is not one of {', '.join(sorted(VERDICTS))}")
+        if not str(entry.get("note", "")).strip():
+            problems.append(f"'{domain}': needs a note saying what was checked")
+        if not str(entry.get("checked", "")).strip():
+            problems.append(f"'{domain}': needs a 'checked' date, so a stale verdict can be spotted")
+        if domain in found:
+            problems.append(f"'{domain}': reviewed twice")
+        found[domain] = {"verdict": verdict, "note": str(entry.get("note", "")).strip(),
+                         "checked": str(entry.get("checked", "")).strip()}
+    if problems:
+        raise WatchlistError("config/reviewed.yaml has problems:\n  - " + "\n  - ".join(problems))
+    return found

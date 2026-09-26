@@ -4,6 +4,78 @@ Every false positive, what caused it, and what changed. Newest first.
 
 ---
 
+## 2026-09-26 — the hyphen class, and where tuning has to stop
+
+The rotation reached the `hyphen` class and found four names at once: `woori-bank.com` (49 certificates, continuous
+since 2018), `shinhan-card.com` (since 2018), `korea-post.com`, `hana-bank.co.kr`. Two of them went straight into
+`review`.
+
+Almost certainly none of them is an attack. **A bank registers the hyphenated form of its own name defensively** —
+that is what a trademark lawyer tells it to do — which makes this a false-positive class rather than four findings.
+
+### What changed: the penalty was about the wrong thing
+
+`LEGITIMATE_OWNERSHIP_PLAUSIBLE` replaces `COINCIDENCE_POSSIBLE_CLASSES`, and now contains `tld` **and** `hyphen`.
+
+Last week's fix restricted the established-business penalty to the `tld` class on the grounds that only there could
+the resemblance be *coincidence*. The hyphen class shows that coincidence was the wrong criterion: nothing is
+coincidental about `woori-bank.com`, but it is entirely plausible that **Woori Bank owns it**. The question the
+penalty should ask is not "could this be an accident?" but "could this legitimately be theirs?" — and for a
+hyphenated brand name it could, while for `woorlbank.com` it could not.
+
+`woori-bank.com` dropped from `watch` to `noise` on that change alone.
+
+### What did not change, deliberately
+
+`shinhan-card.com` is still sitting in `review` at 10. Its certificates have a gap of over a year, so `reactivated`
+fires and blocks the established-business penalty — and a brand letting a defensive registration lapse and renewing
+it later looks *exactly* like a squatter picking one up.
+
+I could make that score come out lower. I am not going to, because the distinction is not in the data. **Certificate
+transparency does not say who owns a domain.** An OV certificate would carry the organisation's legal name in its
+subject, but crt.sh's JSON does not return the subject, and this project is not allowed to look the name up anywhere
+else.
+
+### So the missing piece was a person, not a threshold
+
+`config/reviewed.yaml` records human verdicts, and a verdict overrides the score:
+
+| Verdict | Effect |
+|---|---|
+| `brand-owned`, `third-party` | forced to `noise`, with the reviewer's note attached |
+| `suspicious` | forced to `review` |
+| `unknown` | left at whatever it scored |
+
+Every entry needs a date and a note saying what was actually checked, so a stale verdict can be spotted later. This is
+the same pattern as the network project's `allowlist.tsv` and the endpoint project's `expected.yaml`: the tool ranks
+shapes, a person decides facts, and the decision is written down so the same name is never judged twice.
+
+`woori-bank.com` and `shinhan-card.com` are recorded as **unknown** rather than brand-owned, because claiming
+otherwise would be a guess. They are the first two names on the list for whoever does the WHOIS lookups.
+
+---
+
+## 2026-09-25 — crt.sh failed halfway through and the run ground on regardless
+
+```
+check: asked about 135 of 150 selected names — 0 exist, 6 do not, 129 could not be answered;
+       stopped early, 135 answers stored
+ct-refresh.service: Failed with result 'timeout'.
+```
+
+The canary passed, so the batch began; then crt.sh degraded and **129 of 135 lookups failed**, each burning three
+attempts and two backoffs. Ninety minutes later systemd killed it having learned almost nothing.
+
+`docs/limits.md` predicted this in as many words: *"the canary catches a crt.sh that is failing at the moment the
+batch starts; it cannot catch one that starts failing halfway through."*
+
+**Change:** the run now watches its own error rate and abandons the batch after 20 consecutive failures, or once
+60% of at least 25 answers are errors. It keeps what it learned — the batched writes from the day before meant all
+135 answers survived, which is the only reason that night was not a total loss — and leaves the rest for another
+night, where the rotation will pick them up because errors do not count as checked.
+
+---
+
 ## 2026-09-18 — the scoring pass, with three cases instead of one
 
 The first scheduled night added `cjlogistlcs.com` (CJ Logistics with `i` written as `l`) and `tvvorld.com` (`tworld`

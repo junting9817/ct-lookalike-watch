@@ -49,12 +49,12 @@ BURST_DAYS = 21
 BURST_MAX_CERTIFICATES = 6
 ESTABLISHED_DAYS = 730
 
-# The penalties exist for one situation: a name that resembles a brand *by coincidence*, because the brand's term is
-# an ordinary word that somebody else uses legitimately. That is a TLD-swap problem. Nobody registers a homoglyph, a
-# typo or a hyphenated brand name by accident, so for those classes a long history is not innocence — it is a
-# lookalike that has been running for years. Applying the penalties there is how woorlbank.com, three years of
-# automated issuance on a bank's misspelled name, was scored down for its longevity.
-COINCIDENCE_POSSIBLE_CLASSES = {"tld"}
+# The penalties are about plausible *legitimate ownership*, not about coincidence — a distinction the hyphen class
+# forced. A brand registers woori-bank.com and shinhan-card.com itself, defensively, and those turned up with
+# continuous certificate histories since 2018; so for a hyphenated name, years of renewals really is exculpatory.
+# Nobody defensively registers woorlbank.com or cjlogistlcs.com, so there a long history is not innocence — it is a
+# lookalike that has been running for years, which is how woorlbank.com had been scored down for its longevity.
+LEGITIMATE_OWNERSHIP_PLAUSIBLE = {"tld", "hyphen"}
 
 
 @dataclass
@@ -85,7 +85,8 @@ def tier_for(score: int) -> str:
     return DEFAULT_TIER
 
 
-def score_candidate(row: dict, *, as_of: str, lure_keywords: list[str], is_generic: bool) -> Finding:
+def score_candidate(row: dict, *, as_of: str, lure_keywords: list[str], is_generic: bool,
+                    verdict: dict | None = None) -> Finding:
     """One candidate that exists, with the aggregates of its certificates.
 
     `row` carries: domain, display, brand, klass, label, certificates, foreign_names, first_not_before,
@@ -127,7 +128,7 @@ def score_candidate(row: dict, *, as_of: str, lure_keywords: list[str], is_gener
     age = days_between(first, as_of)
     since_last = days_between(last, as_of)
     gap = int(row.get("max_gap_days") or 0)
-    coincidence_possible = klass in COINCIDENCE_POSSIBLE_CLASSES
+    could_be_theirs = klass in LEGITIMATE_OWNERSHIP_PLAUSIBLE
 
     if age and age <= RECENT_DAYS:
         fire("young", f"first certificate {age} days ago")
@@ -143,13 +144,28 @@ def score_candidate(row: dict, *, as_of: str, lure_keywords: list[str], is_gener
         fire("burst", f"all {certificates} certificates within {max(history, 1)} day{'' if history == 1 else 's'}")
 
     # Longevity and ordinary-word penalties apply only where the resemblance could be coincidence.
-    if coincidence_possible and history > ESTABLISHED_DAYS and not reactivated:
+    if could_be_theirs and history > ESTABLISHED_DAYS and not reactivated:
         fire("long_established",
              f"{history // 365} years of continuous renewals — an established business, not a dormant squat")
-    if coincidence_possible and is_generic:
+    if could_be_theirs and is_generic:
         fire("generic_term", "the brand term is also an ordinary word, so others use it legitimately")
 
     score = max(0, sum(WEIGHTS.get(signal, 0) for signal in signals))
+    tier = tier_for(score)
+
+    # A person's verdict overrides the arithmetic. Scoring ranks shapes; only a human can settle ownership, and
+    # once they have, the same name should not come back to be judged again.
+    if verdict:
+        kind = verdict.get("verdict", "")
+        if kind in ("brand-owned", "third-party"):
+            tier, score = DEFAULT_TIER, 0
+            signals, reasons = signals + ["reviewed"], [f"reviewed {verdict.get('checked', '')}: {kind} — "
+                                                        f"{verdict.get('note', '')}"]
+        elif kind == "suspicious":
+            tier = "review"
+            signals, reasons = signals + ["reviewed"], reasons + [
+                f"reviewed {verdict.get('checked', '')}: a person judged this suspicious — {verdict.get('note', '')}"]
+
     return Finding(domain=str(row["domain"]), display=str(row.get("display") or row["domain"]),
-                   brand=str(row["brand"]), klass=klass, score=score, tier=tier_for(score),
+                   brand=str(row["brand"]), klass=klass, score=score, tier=tier,
                    signals=signals, reasons=reasons)

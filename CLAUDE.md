@@ -116,6 +116,10 @@ CT/
 
 ## Progress
 
+- 2026-09-26: `config/reviewed.yaml` added — human verdicts override the score, because certificate data cannot say
+  who owns a domain. The established-business penalty now applies to `hyphen` as well as `tld`: a brand plausibly
+  owns `woori-bank.com`, which is a different question from whether the resemblance is coincidence. `check.py` also
+  abandons a batch when crt.sh starts failing mid-run, after a night that spent 90 minutes on 129 failed lookups
 - Scoring pass 2026-09-18 after the first scheduled night: penalties now apply only to the `tld` class, where
   resemblance can be coincidence — longevity is not innocence for a homoglyph. Added `recently_issued`,
   `reactivated` and `high_volume`. Three homoglyph findings now sit in `review`: `cjlogistlcs.com` (dormant four

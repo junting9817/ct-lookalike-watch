@@ -18,7 +18,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts" / "lib"))
 import chquery  # noqa: E402
 import scoring  # noqa: E402
-from watchlist import WatchlistError, load  # noqa: E402
+from watchlist import WatchlistError, load, load_verdicts  # noqa: E402
 
 # A name counts as "foreign" when it sits on the candidate's certificate without belonging to the candidate — the
 # mark of a shared or reseller certificate rather than one bought for this name. CDN filler (sni.cloudflaressl.com)
@@ -51,6 +51,7 @@ def main() -> int:
 
     try:
         watchlist = load()
+        verdicts = load_verdicts()
         rows = chquery.query(AGGREGATE)
     except (WatchlistError, chquery.QueryError) as exc:
         print(f"score: {exc}", file=sys.stderr)
@@ -62,15 +63,19 @@ def main() -> int:
 
     as_of = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     findings = [scoring.score_candidate(row, as_of=as_of, lure_keywords=watchlist.lure_keywords,
-                                        is_generic=watchlist.is_generic(str(row.get("label") or "")))
+                                        is_generic=watchlist.is_generic(str(row.get("label") or "")),
+                                        verdict=verdicts.get(str(row.get("domain") or "").lower()))
                 for row in rows]
     findings.sort(key=lambda f: (-f.score, f.domain))
 
     shown = [f for f in findings if not args.tier or f.tier == args.tier]
     tally = Counter(f.tier for f in findings)
 
+    reviewed = sum(1 for f in findings if "reviewed" in f.signals)
     print(f"{len(findings)} names exist; {tally['review']} to review, {tally['watch']} to watch, "
-          f"{tally['weak']} weak, {tally['noise']} noise\n")
+          f"{tally['weak']} weak, {tally['noise']} noise"
+          + (f" · {reviewed} settled by a person" if reviewed else
+             " · none reviewed by a person yet (config/reviewed.yaml)") + "\n")
     for finding in shown:
         marker = {"review": "**", "watch": " *", "weak": "  ", "noise": "  "}[finding.tier]
         shows_as = f"  (shows as {finding.display})" if finding.display != finding.domain else ""

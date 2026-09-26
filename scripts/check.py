@@ -37,6 +37,12 @@ EPOCH = "1970-01-01 00:00:00"
 # after an hour of lookups and stored none of them, because the insert came after the loop. An interrupted run should
 # keep what it has already learned — crt.sh was asked, and asking again costs someone else's service.
 FLUSH_EVERY = 25
+# The canary proves crt.sh is answering when a batch starts; it cannot catch a crt.sh that fails halfway through.
+# On 2026-09-25 that happened: 129 of 135 lookups failed, each burning its retries and backoffs, and systemd killed
+# the run at its 90-minute timeout having learned almost nothing. Giving up early is better than grinding.
+UNHEALTHY_AFTER = 20        # consecutive errors before abandoning the run
+UNHEALTHY_RATE = 0.6        # or this share of errors, once at least this many have been asked
+UNHEALTHY_MINIMUM = 25
 
 
 def now() -> str:
@@ -193,8 +199,18 @@ def main() -> int:
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
+    consecutive_errors = 0
     for index, candidate in enumerate(selected):
         if stopping:
+            break
+        asked_so_far = sum(tally.values())
+        error_rate = tally["error"] / asked_so_far if asked_so_far else 0.0
+        if consecutive_errors >= UNHEALTHY_AFTER or (asked_so_far >= UNHEALTHY_MINIMUM
+                                                    and error_rate >= UNHEALTHY_RATE):
+            if log:
+                log(f"\n  crt.sh is failing ({tally['error']} of {asked_so_far} unanswered, "
+                    f"{consecutive_errors} in a row): abandoning the rest of this batch")
+            stopping = True
             break
         if index and not args.offline:
             time.sleep(args.pause)
@@ -202,6 +218,7 @@ def main() -> int:
         rows, summary = certificate_rows(answer, candidate["brand"], seen_at)
         certificates += rows
         tally[answer.status] += 1
+        consecutive_errors = consecutive_errors + 1 if answer.status == "error" else 0
         checks.append({"domain": candidate["domain"], "checked_at": seen_at, "status": answer.status,
                        "seconds": round(answer.seconds, 2), "detail": answer.detail[:255], **summary})
         if len(checks) >= FLUSH_EVERY:
@@ -221,6 +238,8 @@ def main() -> int:
     print(f"\ncheck: asked about {asked} of {len(selected)} selected names — {found} exist, {tally['absent']} do not, "
           f"{tally['error']} could not be answered"
           + (f"; stopped early, {written} answers stored" if stopping else "")
+          + ("; crt.sh was failing, so the rest was left for another night"
+             if tally["error"] and consecutive_errors >= UNHEALTHY_AFTER else "")
           + (" (--dry-run: nothing written)" if args.dry_run else ""), file=sys.stderr)
     return 0
 

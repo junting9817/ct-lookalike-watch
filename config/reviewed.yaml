@@ -1,0 +1,31 @@
+# Human verdicts on findings. Certificate data cannot tell you who owns a domain — an OV certificate would carry the
+# organisation's legal name, but crt.sh's JSON does not return the subject — so ownership is a question only a person
+# can settle, by looking the name up somewhere this project is not allowed to go.
+#
+# A verdict here overrides the score. That is the point: scoring ranks shapes, people decide facts, and the decision
+# is recorded so the same name never has to be judged twice.
+#
+#   brand-owned   the brand itself holds it, often defensively. Suppressed to noise.
+#   third-party   somebody unrelated, legitimately. Suppressed to noise.
+#   suspicious    a person looked and thinks it warrants action. Forced to review.
+#   unknown       looked at, could not tell. Left at whatever it scored.
+#
+# Every entry needs a date and a note saying what was actually checked, so a stale verdict can be spotted later.
+
+version: 1
+
+verdicts:
+  # Nothing is marked brand-owned yet: that claim needs somebody to look the registrant up, and this project is not
+  # allowed to. These two are recorded as unknown so the shape of the question is visible in the file.
+  - domain: woori-bank.com
+    verdict: unknown
+    checked: 2026-09-26
+    note: >
+      Hyphenated form of the bank's own name, 49 certificates continuous since 2018. That pattern fits a defensive
+      registration by Woori Bank, but nothing here proves it. Needs a WHOIS check by a person.
+  - domain: shinhan-card.com
+    verdict: unknown
+    checked: 2026-09-26
+    note: >
+      Same shape: hyphenated brand name, certificates since 2018. Almost certainly the card company's own, and
+      unconfirmed.

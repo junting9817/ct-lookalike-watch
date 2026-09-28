@@ -1,0 +1,340 @@
+<title>One Letter Wrong</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root {
+  /* violet-cast paper; coral is spent on exactly one thing — the forged character */
+  --ground: #f2f1f6; --surface: #fbfaFd; --sunk: #e7e5ee;
+  --ink: #1b1725; --ink-2: #544d66; --ink-3: #847c96;
+  --rule: #d8d4e2; --rule-soft: #e6e3ed;
+  --accent: #4c3a86; --accent-soft: #e9e4f5;
+  --alarm: #c8452f; --alarm-soft: #f7e4e0;
+  --measure: 62ch;
+  --display: Newsreader, Georgia, "Times New Roman", serif;
+  --body: "Public Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #131119; --surface: #1a1722; --sunk: #221e2c;
+    --ink: #eae7f2; --ink-2: #aaa2bd; --ink-3: #7d7591;
+    --rule: #2e2939; --rule-soft: #241f2f;
+    --accent: #a898e0; --accent-soft: #241d38;
+    --alarm: #f0705a; --alarm-soft: #321c18;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #131119; --surface: #1a1722; --sunk: #221e2c;
+  --ink: #eae7f2; --ink-2: #aaa2bd; --ink-3: #7d7591;
+  --rule: #2e2939; --rule-soft: #241f2f;
+  --accent: #a898e0; --accent-soft: #241d38;
+  --alarm: #f0705a; --alarm-soft: #321c18;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body);
+       font-size: 17px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+.page { max-width: 1000px; margin-inline: auto; padding-inline: 20px; padding-block: 0 80px; }
+h1, h2, h3 { margin: 0; line-height: 1.14; letter-spacing: -.01em; text-wrap: balance; font-family: var(--display);
+             font-weight: 600; }
+.eyebrow { font-family: var(--body); font-size: .68rem; font-weight: 700; letter-spacing: .15em;
+           text-transform: uppercase; color: var(--ink-3); display: block; }
+a { color: var(--accent); text-underline-offset: .18em; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+
+header { padding-block: 64px 40px; }
+header h1 { font-size: clamp(2.3rem, 6.5vw, 3.6rem); max-width: 17ch; margin-top: 20px; }
+.standfirst { font-size: 1.18rem; line-height: 1.55; color: var(--ink-2); max-width: var(--measure);
+              margin: 22px 0 0; }
+
+.headline { margin-top: 40px; border-block: 1px solid var(--rule); padding-block: 26px;
+            display: flex; flex-wrap: wrap; gap: 26px 48px; align-items: baseline; }
+.headline .big { font-family: var(--display); font-size: clamp(2.6rem, 8vw, 4.2rem); line-height: 1;
+                 font-variant-numeric: tabular-nums; }
+.headline .of { font-family: var(--body); font-size: .92rem; color: var(--ink-2); max-width: 34ch; }
+
+section { padding-block: 54px; border-bottom: 1px solid var(--rule); }
+section > h2 { font-size: clamp(1.6rem, 3.6vw, 2.15rem); max-width: 24ch; margin-top: 12px; }
+section > p { max-width: var(--measure); color: var(--ink-2); margin: 16px 0 0; }
+section > p.lead { color: var(--ink); font-size: 1.06rem; }
+
+/* the forgeries, shown as letters because that is what they are */
+.forgeries { margin-top: 36px; display: flex; flex-direction: column; gap: 2px; }
+.forgery { background: var(--surface); border: 1px solid var(--rule); padding: 22px 24px 24px; }
+.pair { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; }
+.name { font-family: var(--mono); font-size: clamp(1.15rem, 3.6vw, 1.7rem); letter-spacing: -.01em;
+        word-break: break-all; }
+.name .swap { color: var(--alarm); background: var(--alarm-soft); padding: 0 .12em; border-radius: 2px;
+              font-weight: 500; }
+.real { font-family: var(--mono); font-size: .92rem; color: var(--ink-3); }
+.real::before { content: "vs "; font-family: var(--body); }
+.facts { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: .86rem; color: var(--ink-2); }
+.facts b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+.say { margin-top: 13px; font-size: .92rem; color: var(--ink-2); max-width: 68ch; }
+.tag { font-family: var(--body); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+       padding: 3px 8px; border-radius: 2px; background: var(--accent-soft); color: var(--accent); }
+.tag.live { background: var(--alarm-soft); color: var(--alarm); }
+
+.table-wrap { margin-top: 28px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; }
+th, td { text-align: left; padding: 9px 18px 9px 0; border-bottom: 1px solid var(--rule-soft); }
+thead th { font-family: var(--body); font-size: .68rem; font-weight: 700; letter-spacing: .12em;
+           text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--rule); }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.k { font-family: var(--mono); font-size: .88rem; }
+tr.done td.k::after { content: " ✓"; color: var(--accent); }
+
+.bars { margin-top: 26px; display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.bar-row { display: grid; grid-template-columns: 7.5rem 1fr 4.5rem; gap: 14px; align-items: center;
+           font-size: .88rem; }
+.bar-row .track { height: 10px; background: var(--sunk); }
+.bar-row .track i { display: block; height: 100%; background: var(--accent); }
+.bar-row .track i.none { background: var(--rule); }
+.bar-row .label { font-family: var(--mono); font-size: .82rem; }
+.bar-row .val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right;
+                color: var(--ink-2); font-size: .82rem; }
+
+.note { margin-top: 30px; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+        padding: 20px 22px 22px; max-width: var(--measure); }
+.note h3 { font-family: var(--body); font-size: .96rem; font-weight: 700; }
+.note p { margin: 8px 0 0; font-size: .92rem; color: var(--ink-2); }
+
+ul.plain { margin: 22px 0 0; padding: 0; list-style: none; max-width: var(--measure);
+           display: flex; flex-direction: column; gap: 15px; }
+ul.plain li { padding-left: 18px; border-left: 2px solid var(--rule); font-size: .94rem; color: var(--ink-2); }
+ul.plain b { color: var(--ink); font-weight: 700; }
+
+footer { padding-block: 40px 0; color: var(--ink-3); font-size: .86rem; max-width: var(--measure); }
+
+@media (max-width: 640px) {
+  .bar-row { grid-template-columns: 6rem 1fr 3.6rem; }
+  .headline { gap: 18px 28px; }
+}
+</style>
+<div class="page">
+
+<header>
+  <span class="eyebrow">Certificate transparency · Korean banks, couriers and telecoms</span>
+  <h1>Almost nobody bothers to misspell a bank.</h1>
+  <p class="standfirst">
+    A domain built to be mistaken for your bank needs a certificate before it can show a padlock — and every
+    certificate issued anywhere is published within minutes. So I generated every single-character lookalike of
+    fourteen Korean brands I could construct, and asked the public logs which ones exist.
+  </p>
+  <div class="headline">
+    <div><span class="big">5</span></div>
+    <p class="of">
+      of <strong>1,196</strong> possible single-character lookalikes have ever held a
+      certificate. That is <strong>0.42%</strong>, and it is a complete answer over that space rather than a
+      sample: every one of them was asked about.
+    </p>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">The five</span>
+  <h2>Every lookalike of a Korean bank, courier or telecom that exists</h2>
+  <p class="lead">
+    The coloured character is the forgery. Read each name quickly, the way anyone reads a browser bar, and the
+    substitution is invisible; that is the entire technique.
+  </p>
+  <div class="forgeries">
+  <article class="forgery">
+    <div class="pair">
+      <span class="name">woor<span class="swap">l</span>bank.com</span>
+      <span class="real">wooribank.com — Woori Bank</span>
+      <span class="tag">review</span>
+    </div>
+    <div class="facts">
+      <span><b>1,829</b> certificates</span>
+      <span>first <b>2023-10-28</b></span>
+      <span>last <b>2025-10-27</b></span>
+      <span><b>336</b> days since</span>
+    </div>
+    <p class="say">&#x27;i&#x27; at position 5 replaced by &#x27;l&#x27;.</p>
+  </article>
+  <article class="forgery">
+    <div class="pair">
+      <span class="name">tw<span class="swap">0</span>rld.com</span>
+      <span class="real">tworld.com — SK Telecom</span>
+      <span class="tag">watch</span>
+    </div>
+    <div class="facts">
+      <span><b>18</b> certificates</span>
+      <span>first <b>2024-11-09</b></span>
+      <span>last <b>2024-12-16</b></span>
+      <span><b>651</b> days since</span>
+    </div>
+    <p class="say">&#x27;o&#x27; at position 3 replaced by &#x27;0&#x27;.</p>
+  </article>
+  <article class="forgery">
+    <div class="pair">
+      <span class="name">t<span class="swap">vv</span>orld.com</span>
+      <span class="real">tworld.com — SK Telecom</span>
+      <span class="tag">review</span>
+    </div>
+    <div class="facts">
+      <span><b>17</b> certificates</span>
+      <span>first <b>2021-07-28</b></span>
+      <span>last <b>2026-02-05</b></span>
+      <span><b>235</b> days since</span>
+    </div>
+    <p class="say">&#x27;w&#x27; at position 2 replaced by &#x27;vv&#x27;.</p>
+  </article>
+  <article class="forgery">
+    <div class="pair">
+      <span class="name">kbankno<span class="swap">vv</span>.com</span>
+      <span class="real">kbanknow.com — K bank</span>
+      <span class="tag">watch</span>
+    </div>
+    <div class="facts">
+      <span><b>14</b> certificates</span>
+      <span>first <b>2022-05-29</b></span>
+      <span>last <b>2023-05-24</b></span>
+      <span><b>1,223</b> days since</span>
+    </div>
+    <p class="say">&#x27;w&#x27; at position 8 replaced by &#x27;vv&#x27;.</p>
+  </article>
+  <article class="forgery">
+    <div class="pair">
+      <span class="name">cjlogist<span class="swap">l</span>cs.com</span>
+      <span class="real">cjlogistics.com — CJ Logistics</span>
+      <span class="tag live">issued this month</span>
+    </div>
+    <div class="facts">
+      <span><b>3</b> certificates</span>
+      <span>first <b>2022-06-11</b></span>
+      <span>last <b>2026-09-12</b></span>
+      <span><b>16</b> days since</span>
+    </div>
+    <p class="say">&#x27;i&#x27; at position 9 replaced by &#x27;l&#x27;.</p>
+  </article></div>
+  <div class="note">
+    <h3>What none of this says</h3>
+    <p>
+      That any of them is a phishing site. A certificate proves somebody asked for a name and could show control of
+      it — nothing more. Each could be a brand's own defensive registration, a researcher, or a squatter waiting to
+      sell. Nothing here was resolved, fetched or visited, deliberately: a lookalike is usually hosted on somebody
+      else's compromised machine, and a DNS lookup tells the operator that someone is watching.
+    </p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Result</span>
+  <h2>Deliberate misspellings are rare. Plausible ones are not.</h2>
+  <p>
+    Five classes of impersonation were generated. Two were asked about completely; the other three were stopped once
+    the answer was obvious. The split between them is the finding.
+  </p>
+  <div class="bars">
+    <div class="bar-row">
+      <span class="label">hyphen</span>
+      <span class="track"><i class="" style="width:94%"></i></span>
+      <span class="val">3.77%</span>
+    </div>
+    <div class="bar-row">
+      <span class="label">tld</span>
+      <span class="track"><i class="" style="width:93%"></i></span>
+      <span class="val">3.70%</span>
+    </div>
+    <div class="bar-row">
+      <span class="label">homoglyph</span>
+      <span class="track"><i class="" style="width:10%"></i></span>
+      <span class="val">0.42%</span>
+    </div>
+    <div class="bar-row">
+      <span class="label">typo</span>
+      <span class="track"><i class="none" style="width:0%"></i></span>
+      <span class="val">0.00%</span>
+    </div>
+    <div class="bar-row">
+      <span class="label">combosquat</span>
+      <span class="track"><i class="none" style="width:0%"></i></span>
+      <span class="val">0.00%</span>
+    </div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Class</th><th>Generated</th><th>Asked</th><th>Exist</th></tr></thead>
+      <tbody><tr class="done"><td class="k">hyphen</td><td class="n">504</td><td class="n">504</td><td class="n">19</td></tr><tr class=""><td class="k">tld</td><td class="n">297</td><td class="n">14</td><td class="n">11</td></tr><tr class="done"><td class="k">homoglyph</td><td class="n">1,196</td><td class="n">1,196</td><td class="n">5</td></tr><tr class=""><td class="k">typo</td><td class="n">2,946</td><td class="n">0</td><td class="n">0</td></tr><tr class=""><td class="k">combosquat</td><td class="n">1,458</td><td class="n">75</td><td class="n">0</td></tr></tbody>
+    </table>
+  </div>
+  <p>
+    A tick marks a class asked about in full. <strong>Nothing at all</strong> was found among
+    2,946 typo candidates or
+    1,458 combosquats in the portion
+    sampled — which is why those were stopped rather than finished.
+  </p>
+</section>
+
+<section>
+  <span class="eyebrow">The awkward half</span>
+  <h2>The hyphen class is mostly the banks protecting themselves</h2>
+  <p>
+    19 of 504 hyphenated names exist — nine times the rate of the
+    homoglyphs. Almost none of it is an attack: <code>woori-bank.com</code>, <code>shinhan-card.com</code> and
+    <code>kb-star.com</code> are what a trademark lawyer tells a bank to register.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Brand</th><th>Score</th></tr></thead>
+      <tbody><tr><td class="k">korea-post.com</td><td>Korea Post</td><td class="n">13</td></tr><tr><td class="k">hana-card.com</td><td>Hana Bank</td><td class="n">11</td></tr><tr><td class="k">sk-telecom.com</td><td>SK Telecom</td><td class="n">11</td></tr><tr><td class="k">hana-bank.com</td><td>Hana Bank</td><td class="n">10</td></tr><tr><td class="k">kb-star.net</td><td>KB Kookmin Bank</td><td class="n">10</td></tr><tr><td class="k">shinhan-card.com</td><td>Shinhan Bank</td><td class="n">10</td></tr><tr><td class="k">cj-logistics.net</td><td>CJ Logistics</td><td class="n">8</td></tr><tr><td class="k">kb-star.com</td><td>KB Kookmin Bank</td><td class="n">8</td></tr></tbody>
+    </table>
+  </div>
+  <p>
+    This is where scoring stops being able to help. A brand that lets a defensive registration lapse and renews it
+    later looks <em>identical</em> to a squatter picking one up, and certificate transparency does not record who owns
+    a domain. So the tool ranks shapes and a person settles ownership, with the verdict written down so the same name
+    is never judged twice.
+  </p>
+</section>
+
+<section>
+  <span class="eyebrow">Method</span>
+  <h2>Generate the names, then ask whether they exist</h2>
+  <p>
+    The obvious approach — search the logs for each brand name — does not work: that query is an unindexed scan, and
+    the index answers it with a timeout, an error, or <strong>success and an empty result</strong>, which is
+    indistinguishable from "nothing matched". Exact-name lookups are reliable, so the question was turned around.
+  </p>
+  <p>
+    That inversion has a cost, stated plainly: <strong>this finds only the impersonations it thought to generate.</strong>
+    A lookalike built some other way is invisible to it.
+  </p>
+  <div class="note">
+    <h3>The canary</h3>
+    <p>
+      Because the index can return an empty success, every batch first asks about names that certainly have
+      certificates. If none can be confirmed, the run stops rather than recording hundreds of names as "no
+      certificate found" — every one of them wrong, and all of them looking like a clean night's work. It fired for
+      real on the first scheduled night, against a domain holding 4,114 certificates.
+    </p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Limits</span>
+  <h2>What this cannot tell you</h2>
+  <ul class="plain">
+    <li><b>Only what was imagined.</b> One substitution at a time, from a curated table of confusable characters,
+        across a short list of likely suffixes. Two substitutions, an unusual character, or a name that impersonates
+        by structure rather than spelling — all invisible.</li>
+    <li><b>Fourteen brands.</b> Korea's other banks, couriers and retailers are outside every number here.</li>
+    <li><b>Existence is not intent.</b> A certificate can be issued and never used. Absence is worse: it was true on
+        the day it was asked and decays immediately.</li>
+    <li><b>No attribution.</b> No WHOIS, no DNS, no page fetched. Who registered these names is a question this
+        project is built not to answer.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>
+    1,789 of 6,401 generated names asked about between
+    2026-09-17 and 2026-09-28;
+    35 exist. Built on a single small cloud VM alongside a network monitor, a honeypot and an
+    endpoint detection project. Source of truth is the public Certificate Transparency index; nothing else was
+    contacted.
+  </p>
+</footer>
+
+</div>

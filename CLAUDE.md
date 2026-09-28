@@ -116,6 +116,14 @@ CT/
 
 ## Progress
 
+- 2026-09-28: **nightly checking stopped** (`systemctl disable --now ct-refresh.timer`; the units stay installed, so
+  `sudo systemctl enable --now ct-refresh.timer` resumes it). The two classes that produce findings are complete:
+  every one of the 1,196 homoglyph candidates and all 504 hyphen candidates have been answered. Final coverage 27.9%
+  (1,789 of 6,401). What remains is 2,946 typo and 1,383 combosquat candidates, both at a zero hit rate after 121
+  asked — about five more weeks of nights to confirm they are empty, which is worth knowing and not worth waiting for
+- Corrected 2026-09-28: earlier class totals were counted across a LEFT JOIN, so they counted check rows rather than
+  candidates and overstated both classes. homoglyph is 1,196 candidates (not 1,444) and hyphen 504 (not 632); both
+  finished several days before I reported them as pending
 - 2026-09-26: `config/reviewed.yaml` added — human verdicts override the score, because certificate data cannot say
   who owns a domain. The established-business penalty now applies to `hyphen` as well as `tld`: a brand plausibly
   owns `woori-bank.com`, which is a different question from whether the resemblance is coincidence. `check.py` also

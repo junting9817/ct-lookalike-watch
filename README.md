@@ -4,6 +4,10 @@ Every TLS certificate issued on the public internet is published to append-only 
 logs an early-warning feed: a domain built to be mistaken for a bank usually gets a certificate days before anyone is
 phished with it.
 
+<img src="docs/page.png" alt="One Letter Wrong" width="100%">
+
+<sub>The published result: every single-character lookalike of fourteen Korean brands, and the five that exist. Regenerate with <code>scripts/build-site.py</code> then <code>docs/screenshot.sh --top 1500</code>.</sub>
+
 This project watches those logs for names that imitate Korean banks, couriers and telecom operators — the brands that
 Korean smishing actually uses — and scores how convincing each imitation is.
 
